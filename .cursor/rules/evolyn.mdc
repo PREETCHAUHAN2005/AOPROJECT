@@ -1,0 +1,25 @@
+---
+description: Evolyn master context — read cursor.md first; continue from the next incomplete stage.
+alwaysApply: true
+---
+
+# Evolyn session bootstrap
+
+You are building **Evolyn**, not AgentForge. Never use the name AgentForge.
+
+Before doing any product work:
+
+1. Read `cursor.md` at the repo root. It is the full master spec, architecture, demo contract, and staged plan.
+2. Read the Implementation status section in `cursor.md`.
+3. Inspect the repo. Trust the code if it disagrees with the status table, then fix the table.
+4. Continue from the next incomplete stage. Do not skip ahead. Do not rewrite working stages.
+
+Product in one line: an agent that executes, traces, evaluates, learns a structured policy, validates it, and only then changes future tool selection.
+
+Hard rules:
+
+- The learning loop must be real in code, not faked in the UI.
+- Do not hardcode post-learning tool order. Promoted policies must change the tool selector.
+- Candidates never change behavior until validation promotes them.
+- Keep the prototype local, modular, deterministic, and demo-reliable.
+- After each stage: run a smoke check, report what works, and update `cursor.md` status.
