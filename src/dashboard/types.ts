@@ -1,4 +1,25 @@
 import type { AgentVersion, LearningSnapshot, Policy, RunInspection } from "@/models";
+import type { PersistenceMode } from "@/store";
+
+export type DemoStepId =
+  | "run"
+  | "analyze"
+  | "learn"
+  | "validate"
+  | "promote"
+  | "rerun"
+  | "done";
+
+export interface DemoNextStep {
+  id: DemoStepId;
+  title: string;
+  reason: string;
+}
+
+export interface PersistenceInfo {
+  mode: PersistenceMode;
+  label: string;
+}
 
 export interface ComparisonMetrics {
   score: number;
@@ -46,4 +67,6 @@ export interface DashboardView {
   before: ComparisonMetrics | null;
   after: ComparisonMetrics | null;
   metrics: StoredMetrics;
+  nextStep: DemoNextStep;
+  persistence: PersistenceInfo;
 }

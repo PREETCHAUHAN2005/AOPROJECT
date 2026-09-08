@@ -1,7 +1,7 @@
 export { getFoundationState } from "./overview";
 export type { FoundationState } from "./overview";
 export { getDashboardView } from "./view-model";
-export type { ComparisonMetrics, DashboardView } from "./types";
+export type { ComparisonMetrics, DashboardView, DemoNextStep, DemoStepId } from "./types";
 export {
   analyzeExistingTrace,
   createImprovement,

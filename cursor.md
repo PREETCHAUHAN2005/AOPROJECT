@@ -657,9 +657,9 @@ If the user asks for the full product in one session, still build in stage order
 
 ## 22. Implementation status
 
-**Current stage:** Stage 10 complete. Final audit wired promoted memories into runtime tool selection.  
-**Repo state at last update:** Clean reset starts at v0. Promoted policies **and** promoted procedural/tool memories change the next run. Unvalidated memories do not. Validate/promote/analyze are idempotent. No external APIs.  
-**Stack:** Next.js App Router, TypeScript 5, JSON file at `data/evolyn.json`.
+**Current stage:** Stage 10 complete. Production upgrade: serverless-safe store, session snapshots, console UX.  
+**Repo state at last update:** Local demo loop unchanged. Vercel writes go to `/tmp` and a client session snapshot; reads no longer write. Promoted policies still change tool order.  
+**Stack:** Next.js App Router, TypeScript 5, JSON store (`data/evolyn.json` locally, `/tmp` on Vercel).
 
 ### Status table
 
@@ -679,14 +679,11 @@ If the user asks for the full product in one session, still build in stage order
 
 ### Last completed work
 
-- Final audit: runtime now applies **promoted** procedural/tool memories in the tool selector (`applyPromotedMemories`), not just promoted policies.
-- Factory `loadMemories` and `memory-manager.loadRelevant` ignore unvalidated memories so candidates cannot change behavior before promotion.
-- Dashboard/metrics still come from stored traces only (no hardcoded 0.68/0.86 scores).
-- Added Reset Demo (`POST /api/demo/reset`) and `npm run demo` so a live talk always starts at v0.
-- Made analyze, validate, and promote idempotent so double-clicks cannot create v2 or duplicate benchmarks.
-- Full Learning Cycle resets first, then runs the complete loop.
-- Proved the 13-step flow from a clean state with `npm run demo-flow`.
+- Production: JSON store no longer writes on read (fixes Vercel `EROFS` 500s). Writes use `/tmp` on Vercel and stay in `data/evolyn.json` locally.
+- Session cookie `evolyn_sid` plus optional HMAC snapshot (`EVOLYN_SESSION_SECRET`) so the learning loop can continue across serverless instances.
+- Dashboard console UX: guided next step, retry, persistence badge, error/loading states, same-origin POST checks.
+- Learning loop contract unchanged: candidates do not change behavior until promotion.
 
 ### Next session should do
 
-Nothing required for the hackathon demo. If time remains, only copy or timing polish. Do not change the learning loop.
+Verify production after deploy: `https://aoproject.vercel.app/` and `/api/health` return 200, then run the full loop in the browser. Optionally set `EVOLYN_SESSION_SECRET` on Vercel.

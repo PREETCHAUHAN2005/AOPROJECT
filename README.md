@@ -98,6 +98,18 @@ No API keys. Tools are local mocks behind a real tool interface.
 
 ---
 
+## Production (Vercel)
+
+The live app cannot write `data/evolyn.json` on Vercel’s read-only serverless filesystem. Evolyn now:
+
+- seeds in memory without writing on read
+- writes session files under `/tmp` when deployed
+- keeps a signed browser snapshot so the learning loop survives cold starts
+
+Set `EVOLYN_SESSION_SECRET` in the Vercel project if you want snapshots HMAC-signed. Mutation APIs only accept same-origin browser requests.
+
+---
+
 ## What I would not change before a demo
 
 Do not hardcode the learned tool order. Do not auto-activate a candidate. Do not invent dashboard numbers. Start every talk from v0.

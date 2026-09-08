@@ -1,10 +1,12 @@
-import { DATA_FILE, ensureSeeded, store } from "@/store";
+import { ensureSeeded, getPersistenceState, store } from "@/store";
 import type { AgentVersion, Task } from "@/models";
+import type { PersistenceMode } from "@/store";
 
 export interface FoundationState {
   product: "Evolyn";
   tagline: string;
-  persistence: string;
+  persistence: PersistenceMode;
+  persistenceLabel: string;
   currentVersion: AgentVersion;
   demoTask: Task;
   counts: {
@@ -24,6 +26,7 @@ export function getFoundationState(): FoundationState {
   const db = ensureSeeded();
   const currentVersion = store.getCurrentVersion();
   const demoTask = store.tasks.get(db.tasks[0]?.id ?? "") ?? db.tasks[0];
+  const persistence = getPersistenceState();
 
   if (!demoTask) {
     throw new Error("Seed demo task is missing.");
@@ -32,7 +35,8 @@ export function getFoundationState(): FoundationState {
   return {
     product: "Evolyn",
     tagline: "An agent that learns how to become a better agent.",
-    persistence: DATA_FILE,
+    persistence: persistence.mode,
+    persistenceLabel: persistence.label,
     currentVersion,
     demoTask,
     counts: {

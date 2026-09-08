@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Evolyn — an agent that learns how to become a better agent.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

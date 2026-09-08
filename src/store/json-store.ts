@@ -14,38 +14,133 @@ import type {
 } from "../models";
 import { EMPTY_DATABASE, type EvolynDatabase } from "./schema";
 import { createSeedDatabase, V0_VERSION_ID } from "./seed";
+import { getSessionId, LOCAL_SESSION_ID } from "./session-context";
 
 export const DATA_DIR = path.join(process.cwd(), "data");
 export const DATA_FILE = path.join(DATA_DIR, "evolyn.json");
 
 export type CollectionName = Exclude<keyof EvolynDatabase, "currentVersionId">;
+export type PersistenceMode = "file" | "tmp" | "memory";
 
-function readDatabase(): EvolynDatabase {
+export interface PersistenceState {
+  mode: PersistenceMode;
+  label: string;
+}
+
+const memory = new Map<string, EvolynDatabase>();
+const writeMode = new Map<string, PersistenceMode>();
+
+function isVercel(): boolean {
+  return Boolean(process.env.VERCEL);
+}
+
+function sessionKey(): string {
+  return getSessionId() || LOCAL_SESSION_ID;
+}
+
+export function resolveDataFile(sessionId = sessionKey()): string {
+  if (isVercel()) {
+    return path.join("/tmp", `evolyn-${sessionId}.json`);
+  }
+  return DATA_FILE;
+}
+
+function persistenceLabel(mode: PersistenceMode): string {
+  if (mode === "file") {
+    return "Local file";
+  }
+  if (mode === "tmp") {
+    return "Serverless session";
+  }
+  return "In-memory (ephemeral)";
+}
+
+export function getPersistenceState(): PersistenceState {
+  const mode = writeMode.get(sessionKey()) ?? (isVercel() ? "memory" : "file");
+  return { mode, label: persistenceLabel(mode) };
+}
+
+function normalize(parsed: EvolynDatabase): EvolynDatabase {
+  return {
+    ...EMPTY_DATABASE,
+    ...parsed,
+    learningEvents: parsed.learningEvents ?? [],
+  };
+}
+
+function isNonWritable(error: unknown): boolean {
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as NodeJS.ErrnoException).code)
+      : "";
+  return code === "EROFS" || code === "EACCES" || code === "EPERM";
+}
+
+function tryReadFile(file: string): EvolynDatabase | null {
   try {
-    const raw = readFileSync(DATA_FILE, "utf8");
-    const parsed = JSON.parse(raw) as EvolynDatabase;
-    return {
-      ...EMPTY_DATABASE,
-      ...parsed,
-      learningEvents: parsed.learningEvents ?? [],
-    };
+    const raw = readFileSync(file, "utf8");
+    return normalize(JSON.parse(raw) as EvolynDatabase);
   } catch {
-    const seeded = createSeedDatabase();
-    writeDatabase(seeded);
-    return seeded;
+    return null;
   }
 }
 
 function writeDatabase(db: EvolynDatabase): void {
-  mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), "utf8");
+  const key = sessionKey();
+  memory.set(key, db);
+  const file = resolveDataFile(key);
+  const dir = path.dirname(file);
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, JSON.stringify(db, null, 2), "utf8");
+    writeMode.set(key, isVercel() ? "tmp" : "file");
+  } catch (error) {
+    if (isNonWritable(error) || isVercel()) {
+      writeMode.set(key, "memory");
+      return;
+    }
+    throw error;
+  }
+}
+
+function readDatabase(): EvolynDatabase {
+  const key = sessionKey();
+  const cached = memory.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const fromDisk = tryReadFile(resolveDataFile(key));
+  if (fromDisk && fromDisk.currentVersionId && fromDisk.versions.length > 0) {
+    memory.set(key, fromDisk);
+    writeMode.set(key, isVercel() ? "tmp" : "file");
+    return fromDisk;
+  }
+
+  const seeded = createSeedDatabase();
+  memory.set(key, seeded);
+  if (!writeMode.has(key)) {
+    writeMode.set(key, isVercel() ? "memory" : "file");
+  }
+  return seeded;
+}
+
+export function hydrateDatabase(db: EvolynDatabase): EvolynDatabase {
+  const normalized = normalize(db);
+  if (!normalized.currentVersionId || normalized.versions.length === 0) {
+    const seeded = createSeedDatabase();
+    memory.set(sessionKey(), seeded);
+    return seeded;
+  }
+  writeDatabase(normalized);
+  return normalized;
 }
 
 export function loadDatabase(): EvolynDatabase {
   const db = readDatabase();
   if (!db.currentVersionId || db.versions.length === 0) {
     const seeded = createSeedDatabase();
-    writeDatabase(seeded);
+    memory.set(sessionKey(), seeded);
     return seeded;
   }
   return db;
@@ -63,12 +158,7 @@ export function resetToSeed(): EvolynDatabase {
 }
 
 export function ensureSeeded(): EvolynDatabase {
-  try {
-    readFileSync(DATA_FILE, "utf8");
-    return loadDatabase();
-  } catch {
-    return resetToSeed();
-  }
+  return loadDatabase();
 }
 
 function listCollection<K extends CollectionName>(name: K): EvolynDatabase[K] {

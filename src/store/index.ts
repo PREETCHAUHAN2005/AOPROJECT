@@ -1,5 +1,17 @@
-export { DATA_DIR, DATA_FILE, ensureSeeded, loadDatabase, resetToSeed, saveDatabase, store } from "./json-store";
-export type { EvolynStore } from "./json-store";
+export {
+  DATA_DIR,
+  DATA_FILE,
+  ensureSeeded,
+  getPersistenceState,
+  hydrateDatabase,
+  loadDatabase,
+  resetToSeed,
+  resolveDataFile,
+  saveDatabase,
+  store,
+} from "./json-store";
+export type { EvolynStore, PersistenceMode, PersistenceState } from "./json-store";
+export { getSessionId, LOCAL_SESSION_ID, runWithStore, runWithStoreAsync } from "./session-context";
 export { EMPTY_DATABASE } from "./schema";
 export type { EvolynDatabase } from "./schema";
 export {
